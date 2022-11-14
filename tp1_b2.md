@@ -480,14 +480,83 @@ Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc
 - ou la commande `curl` depuis l'autre machine (je veux ça dans le compte-rendu :3)
 - sur l'IP de la VM, port 8888
 
+```
+Victor@LAPTOP-INFPUA9P MINGW64 ~ (master)
+$ curl http://10.101.1.11:8888
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   975  100   975    0     0   327k      0 --:--:-- --:--:-- --:--:--  476k<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Directory listing for /</title>
+</head>
+<body>
+<h1>Directory listing for /</h1>
+<hr>
+<ul>
+<li><a href="afs/">afs/</a></li>
+<li><a href="bin/">bin@</a></li>
+<li><a href="boot/">boot/</a></li>
+<li><a href="dev/">dev/</a></li>
+<li><a href="etc/">etc/</a></li>
+<li><a href="home/">home/</a></li>
+<li><a href="lib/">lib@</a></li>
+<li><a href="lib64/">lib64@</a></li>
+<li><a href="media/">media/</a></li>
+<li><a href="mnt/">mnt/</a></li>
+<li><a href="opt/">opt/</a></li>
+<li><a href="proc/">proc/</a></li>
+<li><a href="root/">root/</a></li>
+<li><a href="run/">run/</a></li>
+<li><a href="sbin/">sbin@</a></li>
+<li><a href="srv/">srv/</a></li>
+<li><a href="sys/">sys/</a></li>
+<li><a href="tmp/">tmp/</a></li>
+<li><a href="usr/">usr/</a></li>
+<li><a href="var/">var/</a></li>
+</ul>
+<hr>
+</body>
+</html>
+```
+
 ### B. Modification de l'unité
 
 🌞 **Préparez l'environnement pour exécuter le mini serveur web Python**
 
 - créer un utilisateur `web`
+
+  ```
+  [archi@node1 meow]$ sudo useradd web -m -s /bin/bash -u 2001
+  [archi@node1 meow]$ sudo passwd web
+  Changing password for user web.
+  New password:
+  BAD PASSWORD: The password is shorter than 8 characters
+  Retype new password:
+  passwd: all authentication tokens updated successfully.
+  ```
 - créer un dossier `/var/www/meow/`
+  ```
+  [archi@node1 ~]$ sudo mkdir /var/www
+  [sudo] password for archi:
+  [archi@node1 ~]$ sudo mkdir /var/www/meow/
+  [archi@node1 ~]$ cd /var/www/meow/
+  ```
 - créer un fichier dans le dossier `/var/www/meow/` (peu importe son nom ou son contenu, c'est pour tester)
+  ```
+  [archi@node1 meow]$ sudo nano meow
+  ```
 - montrez à l'aide d'une commande les permissions positionnées sur le dossier et son contenu
+
+  ```
+  [archi@node1 meow]$ ls -all
+  total 4
+  drwxr-xr-x. 2 web  web  24 Nov 14 21:42 .
+  drwxr-xr-x. 3 root root 18 Nov 14 21:33 ..
+  -rw-r--r--. 1 web  web  27 Nov 14 21:41 index.html
+
+  ```
 
 > Pour que tout fonctionne correctement, il faudra veiller à ce que le dossier et le fichier appartiennent à l'utilisateur `web` et qu'il ait des droits suffisants dessus.
 
@@ -497,4 +566,45 @@ Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc
 - `WorkingDirectory=` afin de lancer le serveur depuis le dossier créé au dessus : `/var/www/meow/`
 - ces deux clauses sont à positionner dans la section `[Service]` de votre unité
 
+  ```
+  [archi@node1 meow]$ sudo cat /etc/systemd/system/web.service
+  [Unit]
+  Description=Very simple web service
+
+  [Service]
+  User=web
+  WorkingDirectory=/var/www/meow
+  ExecStart=/usr/bin/python3 -m http.server 8888
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
+
+  ```
+  [archi@node1 ~]$ sudo systemctl daemon-reload
+  [sudo] password for archi:
+  [archi@node1 ~]$ sudo systemctl restart web.service
+  [archi@node1 ~]$ sudo systemctl enable web.service
+  [archi@node1 ~]$ sudo systemctl status web.service
+  ● web.service - Very simple web service
+      Loaded: loaded (/etc/systemd/system/web.service; enabled; vendor preset: d>
+      Active: active (running) since Mon 2022-11-14 21:50:40 CET; 14s ago
+    Main PID: 1201 (python3)
+        Tasks: 1 (limit: 5896)
+      Memory: 9.0M
+          CPU: 39ms
+      CGroup: /system.slice/web.service
+              └─1201 /usr/bin/python3 -m http.server 8888
+
+  ```
+
 🌞 **Vérifiez le bon fonctionnement avec une commande `curl`**
+
+  ```
+  Victor@LAPTOP-INFPUA9P MINGW64 ~ (master)
+  $ curl http://10.101.1.11:8888
+    % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                  Dload  Upload   Total   Spent    Left  Speed
+  100    27  100    27    0     0  12838      0 --:--:-- --:--:-- --:--:-- 27000Archilive test Web Service
+
+  ```
