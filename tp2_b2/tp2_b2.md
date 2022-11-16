@@ -575,9 +575,32 @@ USE <DATABASE_NAME>;
 SHOW TABLES;
 ```
 
+```
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| nextcloud          |
++--------------------+
+2 rows in set (0.01 sec)
+
+
+mysql> USE nextcloud;
+Database changed
+
+mysql> SHOW TABLES;
+Empty set (0.00 sec)
+```
+
 🌞 **Trouver une commande SQL qui permet de lister tous les utilisateurs de la base de données**
 
 > Les utilisateurs de la base de données sont différents des utilisateurs du système Rocky Linux qui porte la base. Les utilisateurs de la base définissent des identifiants utilisés pour se connecter à la base afin d'y voir ou d'y modifier des données.
+
+```
+MariaDB [(none)]> SELECT * FROM mysql.user;
+  [...]
+```
 
 Une fois qu'on s'est assurés qu'on peut se co au service de base de données depuis `web.tp2.linux`, on peut continuer.
 
@@ -603,48 +626,124 @@ $ sudo dnf module enable php:remi-8.1 -y
 $ sudo dnf install -y php81-php
 ```
 
+```
+[archi@web ~]$ sudo dnf config-manager --set-enabled crb
+[archi@web ~]$ sudo dnf install dnf-utils http://rpms.remirepo.net/enterprise/remi-release-9.rpm -y
+Complete!
+[archi@web ~]$ sudo dnf module list php   
+[archi@web ~]$ sudo dnf module enable php:remi-8.1 -y
+Complete!
+[archi@web ~]$ sudo dnf install -y php81-php
+Complete!
+```
 🌞 **Install de tous les modules PHP nécessaires pour NextCloud**
 
-```bash
-# eeeeet euuuh boom. Là non plus j'ai pas pondu ça, c'est la doc :
-$ sudo dnf install -y libxml2 openssl php81-php php81-php-ctype php81-php-curl php81-php-gd php81-php-iconv php81-php-json php81-php-libxml php81-php-mbstring php81-php-openssl php81-php-posix php81-php-session php81-php-xml php81-php-zip php81-php-zlib php81-php-pdo php81-php-mysqlnd php81-php-intl php81-php-bcmath php81-php-gmp
 ```
-
+[archi@web ~]$ sudo dnf install -y libxml2 openssl php81-php php81-php-ctype php81-php-curl php81-php-gd php81-php-iconv php81-php-json php81-php-libxml php81-php-mbstring php81-php-openssl php81-php-posix php81-php-session php81-php-xml php81-php-zip php81-php-zlib php81-php-pdo php81-php-mysqlnd php81-php-intl php81-php-bcmath php81-php-gmp
+Complete!
+```
 🌞 **Récupérer NextCloud**
 
 - créez le dossier `/var/www/tp2_nextcloud/`
   - ce sera notre *racine web* (ou *webroot*)
   - l'endroit où le site est stocké quoi, on y trouvera un `index.html` et un tas d'autres marde, tout ce qui constitue NextClo :D
+
+```
+[archi@web ~]$ sudo mkdir /var/www/tp2_nextcloud/
+
+[archi@web ~]$ cd /var/www/tp2_nextcloud/
+
+[archi@web tp2_nextcloud]$ sudo nano index.html
+
+```
 - récupérer le fichier suivant avec une commande `curl` ou `wget` : https://download.nextcloud.com/server/prereleases/nextcloud-25.0.0rc3.zip
+
+```
+[archi@web /]$ sudo dnf install wget -y
+Complete!
+
+[archi@web ~]$ sudo wget https://download.nextcloud.com/server/prereleases/nextcloud-25.0.0rc3.zip
+Downloaded: 1 files, 168M in 2m 49s (1017 KB/s)
+
+```
 - extrayez tout son contenu dans le dossier `/var/www/tp2_nextcloud/` en utilisant la commande `unzip`
   - installez la commande `unzip` si nécessaire
+
+```
+[archi@web ~]$ sudo dnf install unzip -y
+Complete!
+```
   - vous pouvez extraire puis déplacer ensuite, vous prenez pas la tête
+
+```
+[archi@web ~]$ sudo unzip nextcloud-25.0.0rc3.zip
+
+[archi@web ~]$ ls
+nextcloud  nextcloud-25.0.0rc3.zip
+
+[archi@web ~]$ sudo mv nextcloud /var/www/tp2_nextcloud/
+
+```
   - contrôlez que le fichier `/var/www/tp2_nextcloud/index.html` existe pour vérifier que tout est en place
+
+```
+[archi@web ~]$ ls /var/www/tp2_nextcloud/
+index.html  nextcloud
+```
 - assurez-vous que le dossier `/var/www/tp2_nextcloud/` et tout son contenu appartient à l'utilisateur qui exécute le service Apache
+
+```
+[archi@web ~]$ ls -al /var/www/ | grep tp
+drwxr-xr-x.  3 root root   41 Nov 16 16:23 tp2_nextcloud
+
+[archi@web ~]$ sudo chgrp apache -R /var/www/tp2_nextcloud/
+
+[archi@web ~]$ sudo chown apache -R /var/www/tp2_nextcloud/
+
+[archi@web ~]$ ls -al /var/www/ | grep tp
+drwxr-xr-x.  3 apache apache   41 Nov 16 16:23 tp2_nextcloud
+
+```
 
 > A chaque fois que vous faites ce genre de trucs, assurez-vous que c'est bien ok. Par exemple, vérifiez avec un `ls -al` que tout appartient bien à l'utilisateur qui exécute Apache.
 
 🌞 **Adapter la configuration d'Apache**
 
 - regardez la dernière ligne du fichier de conf d'Apache pour constater qu'il existe une ligne qui inclut d'autres fichiers de conf
+
+```
+[archi@web ~]$ sudo cat /etc/httpd/conf/httpd.conf
+...
+IncludeOptional conf.d/*.conf
+```
 - créez en conséquence un fichier de configuration qui porte un nom clair et qui contient la configuration suivante :
 
-```apache
+```
+[archi@web ~]$ sudo nano /etc/httpd/conf.d/nextcloud.conf
+
 <VirtualHost *:80>
-  DocumentRoot /var/www/tp2_nextcloud/ # on indique le chemin de notre webroot
-  ServerName  web.tp2.linux # on précise le nom que saisissent les clients pour accéder au service
-  <Directory /var/www/tp2_nextcloud/> # on définit des règles d'accès sur notre webroot
+# on indique le chemin de notre webroot
+DocumentRoot /var/www/tp2_nextcloud/
+# on précise le nom que saisissent les clients pour accéder au service
+ServerName  web.tp2.linux
+
+# on définit des règles d'accès sur notre webroot
+<Directory /var/www/tp2_nextcloud/>
     Require all granted
     AllowOverride All
     Options FollowSymLinks MultiViews
     <IfModule mod_dav.c>
-      Dav off
+    Dav off
     </IfModule>
-  </Directory>
+</Directory>
 </VirtualHost>
 ```
 
 🌞 **Redémarrer le service Apache** pour qu'il prenne en compte le nouveau fichier de conf
+
+```
+[archi@web ~]$ sudo systemctl restart httpd
+```
 
 ### C. Finaliser l'installation de NextCloud
 
