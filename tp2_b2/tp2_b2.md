@@ -765,5 +765,15 @@ ServerName  web.tp2.linux
 🌞 **Exploration de la base de données**
 
 - connectez vous en ligne de commande à la base de données après l'installation terminée
+
+```
+[archi@web ~]$ mysql -u nextcloud -h 10.102.1.12 -p -D nextcloud
+```
 - déterminer combien de tables ont été crées par NextCloud lors de la finalisation de l'installation
-  - ***bonus points*** si la réponse à cette question est automatiquement donnée par une requête SQL
+
+```
+mysql> show tables;
+...
+...
+95 rows in set (0.00 sec)
+```
