@@ -160,10 +160,68 @@ La construction d'image avec Docker est basée sur l'utilisation de fichiers `Do
   - une image du Docker Hub
   - digne de confiance
   - qui ne porte aucune application par défaut
+
+```
+mkdir DockerImages
+touch DockerImages/DockerFile
+
+cat DockerImages/DockerFile
+
+  FROM debian:latest
+
+  MAINTAINER archi
+
+  RUN apt update && apt upgrade -y
+
+  CMD ["echo", "Test Image Docker Archi"]
+
+docker build -t test_images DockerImages/
+
+[archi@docker1 ~]$ sudo docker images
+[sudo] password for archi:
+REPOSITORY    TAG       IMAGE ID       CREATED         SIZE
+test_images          latest    4a34ca847454   21 hours ago    145MB
+
+[archi@docker1 ~]$ sudo docker run --name Test1 test_images
+Test Image Docker Archi
+
+```
 - vous ajouterez
   - mise à jour du système
   - installation de Apache
   - page d'accueil Apache HTML personnalisée
+
+```
+[archi@docker1 ~]$ nano DockerImages/Dockerfile
+
+[archi@docker1 ~]$ cat DockerImages/Dockerfile
+FROM debian:latest
+
+MAINTAINER archi
+
+RUN apt update -y && apt upgrade -y
+
+RUN apt install -y apache2
+RUN apt install -y apache2-utils
+
+RUN apt clean
+
+COPY index.html /var/www/html/index.html
+
+EXPOSE 80
+
+CMD [ "apache2ctl", "-D", "FOREGROUND" ]  
+
+[archi@docker1 ~]$ docker build -t apache_image:2.0 DockerImages/
+Successfully built cc1f51de5d83
+Successfully tagged apache_image:2.0
+
+[archi@docker1 ~]$ docker images | grep apache
+apache_image   1.0       cc1f51de5d83   About a minute ago   256MB
+
+[archi@docker1 ~]$ docker run -p 8888:80 -d --name test_apache_image apache_image:2.0
+34c5b7c537902007dbd07ced4cf0d5472ab16f3a956f4c10f71a4768a15bb3c7
+```
 
 📁 **`Dockerfile`**
 
@@ -246,5 +304,12 @@ Peu importe le langage aussi ! Go, Python, PHP (désolé des gros mots), Node (j
   - le `cd` dans le bon dossier
   - la commande `docker build` pour build l'image
   - la commande `docker-compose` pour lancer le(s) conteneur(s)
+
+```
+[archi@docker1 ~]$ git clone https://github.com/Archilive/tp_linux_b2.git
+[archi@docker1 ~]$ cd tp_linux_b2/tp4_b2/app
+[archi@docker1 ~]$ docker build . -t server
+[archi@docker1 ~]$ docker compose up -d
+```
 
 📁 📁 `app/Dockerfile` et `app/docker-compose.yml`. Je veux un sous-dossier `app/` sur votre dépôt git avec ces deux fichiers dedans :)
