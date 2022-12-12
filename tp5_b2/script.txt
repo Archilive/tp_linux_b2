@@ -1,0 +1,29 @@
+echo "Installation du service Minecraft"
+
+sudo yum install -y yum-utils*
+sudo yum-config-manager --add-repo  https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo dnf install git -y
+sudo dnf install npm -y
+
+echo "Lancement du service docker"
+
+sudo systemctl start docker
+sudo systemctl enable docker
+
+echo "Droit distribué à l'utilisateur"
+
+sudo usermod -aG docker $USER
+
+echo "Installation de l'image docker du serveur minecraft"
+
+docker pull itzg/minecraft-server
+
+echo "Mis à jour du Firewall"
+
+sudo firewall-cmd --add-port=8000/tcp
+!! --permanent
+
+mkdir service_minecraft && cd service_minecraft
+git clone https://github.com/Ciremy/express-docker && cd express-docker
+node app.js
